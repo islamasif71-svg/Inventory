@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>হাজী মোদাচ্ছের ক্লথ স্টোর - ইনভেন্টরি</title>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* ═══════════════════════════════════════ আগের CSS হুবহু ═══════════════════════════════════════ */
+        :root {
+            --blue: #0d47a1;
+            --dark: #2c3e50;
+            --gold: #ffc107;
+            --green: #2e7d32;
+            --red: #c62828;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--blue), #1976d2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 5px solid var(--gold);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            margin: 5px 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .box {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            transition: 0.3s;
+        }
+
+        .box:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        h3 {
+            margin-top: 0;
+            color: var(--blue);
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d1d1;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-green {
+            background: var(--green);
+            color: white;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .btn-green:hover {
+            background: #1b5e20;
+            transform: translateY(-1px);
+        }
+
+        .btn-blue {
+            background: var(--blue);
+            color: white;
+            margin-top: 5px;
+        }
+
+        .btn-blue:hover {
+            background: #0a3d8a;
+        }
+
+        .btn-red {
+            background: var(--red);
+            color: white;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .btn-update {
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-left: 5px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .editable-price {
+            cursor: pointer;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        .barcode-card {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border: 2px solid #000;
+            display: inline-block;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .shop-name-bn {
+            font-weight: 900;
+            font-size: 22px;
+            margin-bottom: 5px;
+            color: #000;
+            display: block;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+        }
+
+        .price-tag {
+            font-weight: 900;
+            font-size: 36px;
+            margin-top: 5px;
+            color: #000;
+            border-top: 3px solid #000;
+            padding-top: 5px;
+            line-height: 1;
+        }
+
+        .serial-text {
+            font-size: 14px;
+            color: #000;
+            margin-top: -5px;
+            font-weight: bold;
+        }
+
+        .filter-area {
+            background: var(--dark);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .filter-area select {
+            width: 180px;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: var(--dark);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #fcfcfc;
+        }
+
+        .stock-count {
+            font-weight: bold;
+            color: var(--blue);
+            font-size: 15px;
+        }
+
+        #pdf-render-area {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+
+        /* ═══════════════════════════════════════ Backup System CSS ═══════════════════════════════════════ */
+        .bk-bar {
+            background: #1a2535;
+            border-radius: 12px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #2a3a50;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .bk-bar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #00e676;
+            transition: background 0.4s;
+        }
+
+        .bk-bar.saving::before { background: #ffd600; }
+        .bk-bar.error::before { background: #ff5252; }
+        .bk-bar.pending::before { background: #ff9800; }
+
+        .bk-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bk-ico {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: rgba(0, 230, 118, 0.12);
+            border: 1px solid rgba(0, 230, 118, 0.25);
+            flex-shrink: 0;
+            transition: all 0.4s;
+        }
+
+        .bk-bar.saving .bk-ico {
+            background: rgba(255, 214, 0, 0.12);
+            border-color: rgba(255, 214, 0, 0.25);
+            animation: bkpls 1s infinite;
+        }
+
+        @keyframes bkpls {
+            0%, 100% { transform: scale(1) }
+            50% { transform: scale(1.1) }
+        }
+
+        .bk-txt h5 { font-size: 13px; font-weight: 700; color: #e0e8f0; margin: 0 0 2px 0; }
+        .bk-txt p { font-size: 11px; color: #6b8099; margin: 0; }
+
+        .bk-bdg {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(0, 230, 118, 0.15);
+            color: #00e676;
+            border: 1px solid rgba(0, 230, 118, 0.3);
+            white-space: nowrap;
+        }
+
+        #bk-toasts {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 99999;
+        }
+
+        .bk-toast {
+            background: #1a2535;
+            border: 1px solid #2a3a50;
+            border-radius: 12px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 260px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            animation: tkIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bk-toast::after {
+            content: "";
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 3px; width: 100%;
+            background: #00e676;
+            animation: tkShrink 3s linear forwards;
+        }
+
+        @keyframes tkIn { from { transform: translateX(120%); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+        @keyframes tkOut { from { transform: translateX(0); opacity: 1 } to { transform: translateX(120%); opacity: 0 } }
+        @keyframes tkShrink { from { width: 100% } to { width: 0% } }
+
+        .bk-ti { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: rgba(0, 230, 118, 0.12); flex-shrink: 0; }
+        .bk-tb h6 { font-size: 12px; font-weight: 700; color: #e0e8f0; margin: 0 0 2px 0; }
+        .bk-tb p { font-size: 11px; color: #6b8099; margin: 0; }
+
+
+        /* ═══ স্টক ভ্যালু সামারি ═══ */
+        .stock-summary { margin-bottom: 25px; }
+
+        .summary-card {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin-bottom: 12px;
+            border-left: 6px solid #ccc;
+        }
+        .summary-card.cost-card   { background: #e3f2fd; border-left-color: #0d47a1; }
+        .summary-card.sell-card   { background: #e8f5e9; border-left-color: #2e7d32; }
+        .summary-card.profit-card { background: #fff8e1; border-left-color: #f57f17; }
+
+        .summary-icon { display: none; }
+        .summary-info { display: block; }
+
+        .summary-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .summary-amount {
+            font-size: 28px;
+            font-weight: 900;
+            display: block;
+            margin-bottom: 4px;
+            word-break: break-all;
+            line-height: 1.2;
+        }
+        .cost-card   .summary-amount { color: #0d47a1; }
+        .sell-card   .summary-amount { color: #1b5e20; }
+        .profit-card .summary-amount { color: #e65100; }
+
+        .summary-sub {
+            font-size: 12px;
+            color: #777;
+            display: block;
+        }
+
+        /* ═══ নতুন ফিচার CSS ═══ */
+        .search-bar-wrap {
+            background: #fff;
+            border-radius: 0 0 12px 12px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-top: none;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0;
+        }
+        .search-bar-wrap input {
+            flex: 1;
+            min-width: 180px;
+            padding: 9px 14px;
+            border: 1.5px solid #c5cae9;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .search-bar-wrap input:focus { border-color: var(--blue); }
+
+        /* লো-স্টক */
+        tr.low-stock { background: #fff3e0 !important; }
+        tr.low-stock:hover { background: #ffe0b2 !important; }
+        .low-stock-badge {
+            display: inline-block;
+            background: #e65100;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .alert-bar {
+            background: linear-gradient(135deg, #bf360c, #e64a19);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-bar span { font-size: 18px; }
+
+        /* কুইক সেল */
+        .btn-sell {
+            background: #e65100;
+            color: white;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            margin-left: 3px;
+        }
+        .btn-sell:hover { background: #bf360c; }
+        .btn-minus {
+            background: #555;
+            color: white;
+            padding: 4px 8px;
+            font-size: 13px;
+            font-weight: 900;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-left: 3px;
+            line-height: 1;
+        }
+        .btn-minus:hover { background: #222; }
+
+        /* ক্যাটাগরি ব্রেকডাউন */
+        .cat-breakdown {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-bottom: 22px;
+        }
+        .cat-breakdown h4 {
+            margin: 0 0 14px;
+            color: var(--blue);
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+        }
+        .cat-item {
+            background: #f4f7ff;
+            border: 1px solid #c5cae9;
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+        .cat-item .cat-name { font-size: 12px; color: #555; font-weight: 600; }
+        .cat-item .cat-qty  { font-size: 20px; font-weight: 900; color: var(--blue); line-height: 1.2; }
+        .cat-item .cat-val  { font-size: 11px; color: #777; margin-top: 2px; }
+
+        /* রিপোর্ট বাটন */
+        .btn-report {
+            background: var(--dark);
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .btn-report:hover { background: #1a252f; }
+
+        /* লো-স্টক থ্রেশহোল্ড ইনপুট */
+        .threshold-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        .threshold-row input {
+            width: 50px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* ═══ ক্যাটাগরি সিলেক্ট মডাল ═══ */
+        .cat-modal-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .cat-modal {
+            background: #fff; border-radius: 12px; padding: 24px;
+            width: 300px; max-width: 90vw;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .cat-modal h4 { margin: 0 0 16px; color: var(--blue); font-size: 16px; }
+        .cat-modal select {
+            width: 100%; padding: 10px 12px; border: 1.5px solid #c5cae9;
+            border-radius: 8px; font-size: 15px; outline: none; margin-bottom: 16px;
+        }
+        .cat-modal select:focus { border-color: var(--blue); }
+        .cat-modal-btns { display: flex; gap: 10px; }
+        .cat-modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 700; cursor: pointer; }
+        .btn-modal-ok { background: var(--blue); color: #fff; }
+        .btn-modal-ok:hover { background: #0a3d8a; }
+        .btn-modal-cancel { background: #eee; color: #555; }
+        .btn-modal-cancel:hover { background: #ddd; }
+    </style>
+</head>
+
+<body>
+    <div id="bk-toasts"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>হাজী মোদাচ্ছের ক্লথ স্টোর</h1>
+            <p>সন্দ্বীপ, চট্টগ্রাম | প্রিমিয়াম ইনভেন্টরি কন্ট্রোল</p>
+        </div>
+
+        <div class="bk-bar" id="bkBar">
+            <div class="bk-left">
+                <div class="bk-ico" id="bkIco">☁️</div>
+                <div class="bk-txt">
+                    <h5 id="bkTitle">ব্যাকআপ সিস্টেম সক্রিয়</h5>
+                    <p id="bkDesc">সর্বশেষ ব্যাকআপ: এখনো হয়নি</p>
+                </div>
+            </div>
+            <div class="bk-bdg" id="bkBdg">প্রস্তুত</div>
+            <button onclick="bulkBackupAll()" style="margin-left:12px; padding:6px 14px; background:#1a73e8; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">🔄 সব ব্যাকআপ করুন</button>
+        </div>
+
+        <!-- ═══════════════ স্টক ভ্যালু সামারি ═══════════════ -->
+        <div class="stock-summary">
+            <div class="summary-card cost-card">
+                <div class="summary-icon">🛒</div>
+                <div class="summary-info">
+                    <span class="summary-label">মোট ক্রয় মূল্য</span>
+                    <span class="summary-amount" id="totalCostVal">হিসাব হচ্ছে...</span>
+                    <span class="summary-sub" id="totalCostItems">— টি পণ্য</span>
+                </div>
+            </div>
+            <div class="summary-card sell-card">
+                <div class="summary-icon">💰</div>
+                <div class="summary-info">
+                    <span class="summary-label">মোট বিক্রয় মূল্য</span>
+                    <span class="summary-amount" id="totalSellVal">হিসাব হচ্ছে...</span>
+                    <span class="summary-sub" id="totalSellItems">— টি পণ্য</span>
+                </div>
+            </div>
+            <div class="summary-card profit-card">
+                <div class="summary-icon">📈</div>
+                <div class="summary-info">
+                    <span class="summary-label">সম্ভাব্য মুনাফা</span>
+                    <span class="summary-amount" id="totalProfitVal">হিসাব হচ্ছে...</span>
+                    <span class="summary-sub" id="totalProfitPct">—% মার্জিন</span>
+                </div>
+            </div>
+        </div>
+        <!-- ══════════════════════════════════════════════════ -->
+
+        <!-- লো-স্টক অ্যালার্ট বার -->
+        <div class="alert-bar" id="alertBar">
+            <span>⚠️</span>
+            <span id="alertMsg">কিছু পণ্যের স্টক কম!</span>
+        </div>
+
+        <!-- ক্যাটাগরি ব্রেকডাউন -->
+        <div class="cat-breakdown">
+            <h4 onclick="toggleCatBreakdown()">
+                📂 ক্যাটাগরি-ওয়াইজ স্টক বিশ্লেষণ
+                <span id="catToggleIcon" style="font-size:12px; color:#888;">▼ দেখুন</span>
+            </h4>
+            <div id="catBreakdownBody" style="display:none;">
+                <div class="cat-grid" id="catGrid">
+                    <div style="color:#aaa; font-size:13px;">লোড হচ্ছে...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <div class="box">
+                <h3>📦 নতুন পণ্য এন্ট্রি</h3>
+                <div class="form-group"><label>পণ্যের নাম</label><input type="text" id="pName" placeholder="যেমন: টাঙ্গাইল সুতি শাড়ি"></div>
+                <div class="form-group"><label>ক্যাটাগরি</label><select id="pCategorySelect"></select></div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;"><label>পরিমাণ (Qty)</label><input type="number" id="pQty" value="1" min="1"></div>
+                    <div class="form-group" style="flex: 1;"><label>বিক্রয় মূল্য</label><input type="number" id="pPrice" placeholder="0"></div>
+                </div>
+                <div class="form-group"><label>কেনা দাম (গোপন)</label><input type="number" id="pCost" placeholder="0"></div>
+                <button class="btn btn-green" onclick="saveToInventory()">💾 সেভ ও বারকোড তৈরি</button>
+            </div>
+
+            <div class="box">
+                <h3>🏷️ ক্যাটাগরি ও প্রিন্ট</h3>
+                <div class="form-group" style="display: flex; gap: 8px;">
+                    <input type="text" id="newCatInput" placeholder="নতুন ক্যাটাগরি">
+                    <button class="btn btn-blue" onclick="addNewCategory()" style="width: 140px;">যোগ করুন</button>
+                </div>
+                <div id="categoryListDisplay" style="max-height: 100px; overflow-y: auto; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;"></div>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <div id="print-section" style="text-align: center;">
+                    <div class="barcode-card" id="barcode-area" style="display:none;">
+                        <span class="shop-name-bn">হাজী মোদাচ্ছের ক্লথ স্টোর</span>
+                        <svg id="barcode-img"></svg>
+                        <div class="serial-text" id="serial-num"></div>
+                        <div class="price-tag" id="price-display"></div>
+                    </div>
+                </div>
+                <div id="download-controls" style="display:none; margin-top:15px; background: #e3f2fd; padding: 15px; border-radius: 10px;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>প্রিন্ট কপি সংখ্যা: </label>
+                        <input type="number" id="copyQty" value="1" min="1" style="width: 80px; display: inline-block; padding: 8px;">
+                    </div>
+                    <button class="btn btn-blue" style="width:100%;" onclick="downloadBarcodePDF()">📥 HD PDF ডাউনলোড করুন</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-area">
+            <h3 style="color: white; border: none; margin: 0; font-size: 16px;">📊 বর্তমান স্টক লিস্ট</h3>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button class="btn-report" onclick="downloadReportPDF()">📄 স্টক রিপোর্ট PDF</button>
+                <span style="font-size:14px; color:white;">ফিল্টার:</span>
+                <select id="viewFilter" onchange="loadStock()" style="padding:7px; border-radius:6px; border:none; font-size:13px;"><option value="All">সব পণ্য</option></select>
+            </div>
+        </div>
+        <div class="search-bar-wrap">
+            <input type="text" id="stockSearch" placeholder="🔍 পণ্যের নাম বা সিরিয়াল নম্বর দিয়ে সার্চ করুন..." oninput="applySearch()">
+            <div class="threshold-row">
+                <span>⚠️ লো-স্টক সীমা:</span>
+                <input type="number" id="lowThreshold" value="1" min="1" max="50" onchange="applySearch()">
+                <span>পিস</span>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>সিরিয়াল (S/N)</th><th>পণ্যের নাম</th><th>ক্যাটাগরি</th><th>পরিমাণ</th><th>কেনা দাম</th><th>বিক্রয় মূল্য</th><th>অ্যাকশন</th></tr></thead>
+            <tbody id="stock-table"></tbody>
+        </table>
+    </div>
+
+    <div id="pdf-render-area"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-4NWcWQgw5vkAnq8r1gZKzM-nS53hIeQ",
+            authDomain: "haji-cloth-store.firebaseapp.com",
+            databaseURL: "https://haji-cloth-store-default-rtdb.firebaseio.com",
+            projectId: "haji-cloth-store",
+            storageBucket: "haji-cloth-store.firebasestorage.app",
+            messagingSenderId: "944010988937",
+            appId: "1:944010988937:web:3e5339759862691312a558"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let lastGeneratedData = null;
+
+        const SHEET_URL = "https://script.google.com/macros/s/AKfycbwv6fWSguLWk4h1p-BnbZDyiZnJ05gJGeDLk2-EpjcCEsY_geMw2JlTjARWn98YZkBWaw/exec";
+        const BK_PENDING = "hmc_inv_pending";
+
+        function bkSet(type, ico, title, desc, bdg) {
+            const bar = document.getElementById('bkBar');
+            bar.className = 'bk-bar ' + (type || '');
+            document.getElementById('bkIco').textContent = ico;
+            document.getElementById('bkTitle').textContent = title;
+            document.getElementById('bkDesc').textContent = desc;
+            document.getElementById('bkBdg').textContent = bdg;
+        }
+
+        function bkToast(type, ico, title, desc) {
+            const c = document.getElementById('bk-toasts');
+            const t = document.createElement('div');
+            t.className = 'bk-toast ' + (type || '');
+            t.innerHTML = `<div class="bk-ti">${ico}</div><div class="bk-tb"><h6>${title}</h6><p>${desc}</p></div>`;
+            c.appendChild(t);
+            setTimeout(() => { t.style.animation = 'tkOut 0.4s forwards'; setTimeout(() => t.remove(), 400); }, 3000);
+        }
+
+        // ══ Backup Queue System ══
+        const _bkQueue = [];
+        let _bkRunning = false;
+
+        function bkEnqueue(type, data) {
+            _bkQueue.push({ type, data });
+            if (!_bkRunning) _bkProcessQueue();
+        }
+
+        function _bkProcessQueue() {
+            if (_bkQueue.length === 0) { _bkRunning = false; return; }
+            _bkRunning = true;
+            const { type, data } = _bkQueue.shift();
+            bkSend(type, data, 0, _bkProcessQueue);
+        }
+
+        function bkSend(type, data, retry = 0, onDone = null) {
+            fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ type, data }) })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'ok') {
+                    const now = new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' });
+                    bkSet('', '☁️', 'ব্যাকআপ সিস্টেম সক্রিয়', 'সর্বশেষ: ' + (data.name || data.serial || '') + ' — ' + now, 'সফল ✓');
+                    bkToast('', '✅', 'ব্যাকআপ সম্পন্ন', (data.name || '') + ' Sheet-এ সেভ হয়েছে');
+                    bkSendPending();
+                    if (onDone) onDone();
+                } else throw new Error('err');
+            })
+            .catch(() => {
+                if (retry < 2) {
+                    bkSet('error', '⚠️', 'Retry করছে...', (retry + 1) + ' নম্বর চেষ্টা হচ্ছে...', 'Retry...');
+                    setTimeout(() => bkSend(type, data, retry + 1, onDone), 30000);
+                } else {
+                    const p = JSON.parse(localStorage.getItem(BK_PENDING) || '[]');
+                    p.push({ type, data, time: Date.now() });
+                    localStorage.setItem(BK_PENDING, JSON.stringify(p));
+                    bkSet('pending', '📦', 'Pending ব্যাকআপ আছে', 'Internet আসলে automatically পাঠাবে', 'Pending');
+                    bkToast('error', '⚠️', 'ব্যাকআপ Pending', 'Internet আসলে automatically পাঠানো হবে');
+                    if (onDone) onDone();
+                }
+            });
+        }
+
+        function bkSendPending() {
+            const p = JSON.parse(localStorage.getItem(BK_PENDING) || '[]');
+            if (!p.length) return;
+            p.forEach((item, i) => {
+                setTimeout(() => {
+                    fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ type: item.type, data: item.data }) })
+                    .then(r => r.json()).then(res => {
+                        if (res.status === 'ok') {
+                            const rem = JSON.parse(localStorage.getItem(BK_PENDING) || '[]').filter(x => x.time !== item.time);
+                            localStorage.setItem(BK_PENDING, JSON.stringify(rem));
+                            if (!rem.length) bkToast('', '✅', 'সব Pending ব্যাকআপ সম্পন্ন', 'সব ডেটা Sheet-এ সেভ হয়েছে');
+                        }
+                    }).catch(() => {});
+                }, i * 2000);
+            });
+        }
+
+        window.addEventListener('online', () => {
+            bkToast('', '🌐', 'Internet সংযোগ পাওয়া গেছে', 'Pending ব্যাকআপ পাঠানো হচ্ছে...');
+            setTimeout(bkSendPending, 2000);
+        });
+
+        function loadCategories() {
+            db.ref('settings/categories').on('value', snap => {
+                const cats = snap.val() || ["শাড়ি", "লুঙ্গি"];
+                let sHtml = "", fHtml = '<option value="All">সব পণ্য</option>', lHtml = "";
+                cats.forEach((c, index) => {
+                    sHtml += `<option value="${c}">${c}</option>`;
+                    fHtml += `<option value="${c}">${c}</option>`;
+                    lHtml += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; background:white; padding:5px 10px; border-radius:4px;"><span style="font-size:14px;">${c}</span><button class="btn-red" onclick="deleteCategory(${index})" title="মুছুন">×</button></div>`;
+                });
+                document.getElementById('pCategorySelect').innerHTML = sHtml;
+                document.getElementById('viewFilter').innerHTML = fHtml;
+                document.getElementById('categoryListDisplay').innerHTML = lHtml;
+            });
+        }
+
+        function addNewCategory() {
+            const val = document.getElementById('newCatInput').value.trim();
+            if (!val) return;
+            db.ref('settings/categories').once('value', snap => {
+                let cats = snap.val() || []; cats.push(val); db.ref('settings/categories').set(cats);
+                document.getElementById('newCatInput').value = "";
+            });
+        }
+
+        function deleteCategory(i) {
+            if (confirm("এই ক্যাটাগরি মুছে ফেলতে চান?")) db.ref('settings/categories').once('value', snap => {
+                let cats = snap.val(); cats.splice(i, 1); db.ref('settings/categories').set(cats);
+            });
+        }
+
+        function saveToInventory() {
+            const name = document.getElementById('pName').value, price = document.getElementById('pPrice').value, cost = document.getElementById('pCost').value;
+            const qty = parseInt(document.getElementById('pQty').value), category = document.getElementById('pCategorySelect').value;
+            const sID = "HMC" + Date.now().toString().slice(-6);
+            if (!name || !price) { alert("দয়া করে নাম এবং মূল্য দিন!"); return; }
+            const invData = { name, category, qty, price, cost, serial: sID, barcode: sID };
+            _markLocalUpdate(sID);
+            db.ref('inventory/' + sID).set(invData).then(() => {
+                db.ref('inventory_updates/' + sID).set(Date.now());
+                generateBarcode(sID, price);
+                bkEnqueue("inventory", invData);
+                alert("সফলভাবে স্টক আপডেট হয়েছে!");
+            });
+        }
+
+        function addMoreQty(id, oldQty) {
+            let added = prompt("কত পিস নতুন স্টক যোগ করতে চান?", "1");
+            if (added != null && added !== "") {
+                _markLocalUpdate(id);
+                db.ref('inventory/' + id).update({ qty: parseInt(oldQty) + parseInt(added) }).then(() => {
+                    db.ref('inventory_updates/' + id).set(Date.now());
+                    db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+                });
+            }
+        }
+
+        function editCost(id, oldCost) {
+            let newCost = prompt("নতুন কেনা দাম সেট করুন:", oldCost);
+            if (newCost != null && newCost !== "") {
+                _markLocalUpdate(id);
+                db.ref('inventory/' + id).update({ cost: newCost }).then(() => {
+                    db.ref('inventory_updates/' + id).set(Date.now());
+                    db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+                });
+            }
+        }
+
+        function editName(id, oldName) {
+            let newName = prompt("নতুন পণ্যের নাম সেট করুন:", oldName);
+            if (newName != null && newName.trim() !== "") {
+                _markLocalUpdate(id);
+                db.ref('inventory/' + id).update({ name: newName.trim() }).then(() => {
+                    db.ref('inventory_updates/' + id).set(Date.now());
+                    db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+                });
+            }
+        }
+
+        function editCategory(id, oldCat) {
+            db.ref('settings/categories').once('value', snap => {
+                const cats = snap.val() || [];
+                if (!cats.length) { alert('কোনো ক্যাটাগরি নেই! আগে ক্যাটাগরি তৈরি করুন।'); return; }
+
+                // পুরনো মডাল থাকলে সরাও
+                const old = document.getElementById('catModalOverlay');
+                if (old) old.remove();
+
+                // ড্রপডাউন অপশন
+                const opts = cats.map(c =>
+                    `<option value="${c}" ${c === oldCat ? 'selected' : ''}>${c}</option>`
+                ).join('');
+
+                // মডাল তৈরি
+                const modal = document.createElement('div');
+                modal.id = 'catModalOverlay';
+                modal.className = 'cat-modal-overlay';
+                modal.innerHTML = `
+                    <div class="cat-modal">
+                        <h4>📂 ক্যাটাগরি পরিবর্তন করুন</h4>
+                        <select id="catModalSelect">${opts}</select>
+                        <div class="cat-modal-btns">
+                            <button class="btn-modal-cancel" onclick="document.getElementById('catModalOverlay').remove()">বাতিল</button>
+                            <button class="btn-modal-ok" onclick="saveCatFromModal('${id}')">✔ সেভ করুন</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+
+                // overlay ক্লিকে বন্ধ
+                modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            });
+        }
+
+        function saveCatFromModal(id) {
+            const newCat = document.getElementById('catModalSelect').value;
+            if (newCat) {
+                _markLocalUpdate(id);
+                db.ref('inventory/' + id).update({ category: newCat }).then(() => {
+                    db.ref('inventory_updates/' + id).set(Date.now());
+                    db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+                });
+                document.getElementById('catModalOverlay').remove();
+            }
+        }
+
+        function editPrice(id, oldPrice) {
+            let newPrice = prompt("নতুন বিক্রয় মূল্য সেট করুন:", oldPrice);
+            if (newPrice != null && newPrice !== "") {
+                _markLocalUpdate(id);
+                db.ref('inventory/' + id).update({ price: newPrice }).then(() => {
+                    db.ref('inventory_updates/' + id).set(Date.now());
+                    db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+                });
+            }
+        }
+
+        function generateBarcode(serial, price) {
+            lastGeneratedData = { serial, price };
+            document.getElementById('barcode-area').style.display = "inline-block";
+            document.getElementById('download-controls').style.display = "block";
+            document.getElementById('serial-num').innerText = "S/N: " + serial;
+            document.getElementById('price-display').innerText = "মূল্য: " + price + "/-";
+            JsBarcode("#barcode-img", serial, { format: "CODE128", width: 1.5, height: 50, displayValue: false });
+        }
+
+        async function downloadBarcodePDF() {
+            if (!lastGeneratedData) return;
+            const { jsPDF } = window.jspdf;
+            const qty = parseInt(document.getElementById('copyQty').value) || 1;
+            const doc = new jsPDF({ orientation: 'l', unit: 'in', format: [2, 1], compress: false });
+            const renderArea = document.getElementById('pdf-render-area');
+            for (let i = 0; i < qty; i++) {
+                renderArea.innerHTML = `<div id="pdf-box" style="width: 2in; height: 1in; background: #fff; text-align: center; border: 1.5px solid #000; display: flex; flex-direction: column; justify-content: space-between; align-items: center; box-sizing: border-box; padding: 3px; overflow: hidden;"><div style="font-weight: 900; font-size: 11px; border-bottom: 1.2px solid #000; width: 100%; padding-bottom: 1px; line-height: 1;">হাজী মোদাচ্ছের ক্লথ স্টোর</div><div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; max-width: 1.8in;"><svg id="pdf-svg-barcode"></svg><div style="font-size: 7px; font-weight: bold; color: #000; margin-top: 1px;">S/N: ${lastGeneratedData.serial}</div></div><div style="font-weight: 900; font-size: 18px; border-top: 1.8px solid #000; width: 100%; padding-top: 1px; line-height: 1.1;">মূল্য: ${lastGeneratedData.price}/-</div></div>`;
+                JsBarcode("#pdf-svg-barcode", lastGeneratedData.serial, { format: "CODE128", width: 1.3, height: 32, displayValue: false, margin: 0 });
+                await new Promise(r => setTimeout(r, 200));
+                const canvas = await html2canvas(document.getElementById('pdf-box'), { scale: 8, useCORS: true, backgroundColor: "#ffffff" });
+                if (i > 0) doc.addPage([2, 1], 'l');
+                doc.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', 0, 0, 2, 1, undefined, 'NONE');
+            }
+            doc.save(`Barcode_${lastGeneratedData.serial}.pdf`);
+        }
+
+        /* ═══════════════ স্টক ভ্যালু আপডেট ফাংশন ═══════════════ */
+        function updateStockSummary(items) {
+            let totalCost = 0, totalSell = 0, totalQty = 0;
+            items.forEach(item => {
+                const qty   = parseInt(item.qty)   || 0;
+                const cost  = parseFloat(item.cost)  || 0;
+                const price = parseFloat(item.price) || 0;
+                totalCost += cost  * qty;
+                totalSell += price * qty;
+                totalQty  += qty;
+            });
+            const profit = totalSell - totalCost;
+            const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : 0;
+
+            const fmt = n => '৳ ' + Math.round(n).toLocaleString('bn-BD');
+
+            document.getElementById('totalCostVal').textContent   = fmt(totalCost);
+            document.getElementById('totalSellVal').textContent   = fmt(totalSell);
+            document.getElementById('totalProfitVal').textContent = fmt(profit);
+            document.getElementById('totalCostItems').textContent = totalQty + ' টি পণ্য (সব মিলিয়ে)';
+            document.getElementById('totalSellItems').textContent = 'সর্বোচ্চ আয় হতে পারে';
+            document.getElementById('totalProfitPct').textContent = margin + '% সম্ভাব্য মার্জিন';
+        }
+        /* ═══════════════════════════════════════════════════════ */
+
+        // ══ গ্লোবাল ইনভেন্টরি স্টোর ══
+        let _allInventory = [];
+        let _isBackup = false;
+
+        // Firebase সবসময় _allInventory আপডেট করে, তারপর applySearch() call করে
+        function loadStock() {
+            db.ref('inventory').on('value', async (snap) => {
+                const data = snap.val();
+                if (!data || Object.keys(data).length === 0) {
+                    bkSet('pending', '🔄', 'ব্যাকআপ রিড হচ্ছে', 'Primary সার্ভারে ডাটা নেই', 'Reading...');
+                    try {
+                        const response = await fetch(SHEET_URL);
+                        const sheetData = await response.json();
+                        _allInventory = sheetData;
+                        _isBackup = true;
+                        updateStockSummary(_allInventory);
+                        bkSet('', '☁️', 'ব্যাকআপ মোড সক্রিয়', 'সরাসরি শিট থেকে রিড হচ্ছে', 'Backup Live');
+                    } catch (e) {
+                        document.getElementById('stock-table').innerHTML = "<tr><td colspan='7' style='text-align:center;'>কোন ডাটা পাওয়া যায়নি!</td></tr>";
+                        return;
+                    }
+                } else {
+                    _allInventory = Object.values(data);
+                    _isBackup = false;
+                    updateStockSummary(_allInventory);
+                    if(document.getElementById('catBreakdownBody').style.display !== 'none') updateCatBreakdown();
+                }
+                applySearch(); // সার্চ ও ফিল্টার অনুযায়ী render
+            });
+        }
+
+        // সার্চ বা ফিল্টার যেকোনো সময় বদলালে এটা call হয়
+        function applySearch() {
+            const filter = document.getElementById('viewFilter')?.value || 'All';
+            const srch = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+            const threshold = parseInt(document.getElementById('lowThreshold')?.value) || 1;
+            renderTable(_allInventory, filter, _isBackup, srch, threshold);
+        }
+
+        function renderTable(items, filter, isFromBackup, srch, threshold) {
+            srch = srch || '';
+            threshold = threshold || 1;
+            let html = "", lowCount = 0;
+            items.forEach(item => {
+                if (filter !== "All" && item.category !== filter) return;
+                if (srch && !(item.serial||'').toLowerCase().includes(srch) && !(item.name||'').toLowerCase().includes(srch)) return;
+                const qty = parseInt(item.qty) || 0;
+                const isLow = qty <= threshold;
+                if (isLow) lowCount++;
+                const rowClass = isLow ? 'class="low-stock"' : '';
+                const lowBadge = isLow ? `<span class="low-stock-badge">কম!</span>` : '';
+                const sourceMark = isFromBackup ? `<br><small style="color:red;">(Backup)</small>` : '';
+                html += `<tr ${rowClass}>
+                    <td><b>${item.serial}</b>${lowBadge} ${sourceMark}</td>
+                    <td><span class="${!isFromBackup ? 'editable-price' : ''}" onclick="${!isFromBackup ? `editName('${item.serial}', '${item.name}')` : ''}" title="${!isFromBackup ? 'ক্লিক করে এডিট করুন' : ''}">${item.name}</span></td>
+                    <td><span class="${!isFromBackup ? 'editable-price' : ''}" onclick="${!isFromBackup ? `editCategory('${item.serial}', '${item.category}')` : ''}" title="${!isFromBackup ? 'ক্লিক করে এডিট করুন' : ''}">${item.category}</span></td>
+                    <td>
+                        <span class="stock-count" style="${isLow ? 'color:#e65100;' : ''}">${item.qty} টি</span>
+                        ${!isFromBackup ? `<button class="btn-update" onclick="addMoreQty('${item.serial}', '${item.qty}')">+</button>` : ''}
+                        ${!isFromBackup ? `<button class="btn-minus" onclick="decreaseQty('${item.serial}', '${item.qty}', '${item.name}')" title="পরিমাণ কমান">−</button>` : ''}
+                    </td>
+                    <td><span class="${!isFromBackup ? 'editable-price' : ''}" onclick="${!isFromBackup ? `editCost('${item.serial}', '${item.cost}')` : ''}">${item.cost || 0}/-</span></td>
+                    <td><b class="${!isFromBackup ? 'editable-price' : ''}" style="color:var(--blue);" onclick="${!isFromBackup ? `editPrice('${item.serial}', '${item.price}')` : ''}">${item.price}/-</b></td>
+                    <td>
+                        <button class="btn btn-blue" style="padding:5px 10px; font-size:11px;" onclick="generateBarcode('${item.serial}', '${item.price}')">বারকোড</button>
+                        ${!isFromBackup ? `<button class="btn-red" onclick="deleteProduct('${item.serial}')">×</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('stock-table').innerHTML = html || "<tr><td colspan='7' style='text-align:center; color:#aaa;'>কোনো পণ্য পাওয়া যায়নি</td></tr>";
+
+            // লো-স্টক অ্যালার্ট
+            const ab = document.getElementById('alertBar');
+            if (lowCount > 0 && !isFromBackup) {
+                ab.style.display = 'flex';
+                document.getElementById('alertMsg').textContent = '⚠️ ' + lowCount + 'টি পণ্যের স্টক কম! দ্রুত স্টক পুনরায় ভরুন।';
+            } else {
+                ab.style.display = 'none';
+            }
+        }
+
+        // ══ কুইক সেল ══
+        function quickSell(id, currentQty, name) {
+            const qty = parseInt(currentQty);
+            if (qty <= 0) { alert('স্টক শেষ!'); return; }
+            const sellQty = parseInt(prompt(`"${name}" থেকে কত পিস বিক্রি হয়েছে?`, '1'));
+            if (!sellQty || isNaN(sellQty) || sellQty <= 0) return;
+            if (sellQty > qty) { alert('স্টকে এতটি নেই! বর্তমান স্টক: ' + qty); return; }
+            _markLocalUpdate(id);
+            db.ref('inventory/' + id).update({ qty: qty - sellQty }).then(() => {
+                db.ref('inventory_updates/' + id).set(Date.now());
+                db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+            });
+            bkToast('', '✅', 'বিক্রয় রেকর্ড', name + ' থেকে ' + sellQty + ' পিস বিক্রি হয়েছে');
+        }
+
+        // ══ স্টক কমানো (সংশোধন) ══
+        function decreaseQty(id, currentQty, name) {
+            const qty = parseInt(currentQty);
+            const sub = parseInt(prompt(`"${name}" থেকে কত পিস কমাবেন? (বর্তমান: ${qty} পিস)`, '1'));
+            if (!sub || isNaN(sub) || sub <= 0) return;
+            if (sub > qty) { alert('স্টকে মাত্র ' + qty + ' পিস আছে! এর বেশি কমানো যাবে না।'); return; }
+            _markLocalUpdate(id);
+            db.ref('inventory/' + id).update({ qty: qty - sub }).then(() => {
+                db.ref('inventory_updates/' + id).set(Date.now());
+                db.ref('inventory/' + id).once('value', snap => {
+                    const item = snap.val();
+                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+                });
+            });
+            bkToast('', 'ℹ️', 'স্টক সংশোধন', name + ' থেকে ' + sub + ' পিস কমানো হয়েছে');
+        }
+
+        // ══ ক্যাটাগরি ব্রেকডাউন ══
+        function toggleCatBreakdown() {
+            const body = document.getElementById('catBreakdownBody');
+            const icon = document.getElementById('catToggleIcon');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.textContent = '▲ লুকান';
+                updateCatBreakdown();
+            } else {
+                body.style.display = 'none';
+                icon.textContent = '▼ দেখুন';
+            }
+        }
+
+        function updateCatBreakdown() {
+            if (!_allInventory.length) return;
+            const catMap = {};
+            _allInventory.forEach(item => {
+                const c = item.category || 'অন্যান্য';
+                if (!catMap[c]) catMap[c] = { qty: 0, val: 0 };
+                catMap[c].qty += parseInt(item.qty) || 0;
+                catMap[c].val += (parseFloat(item.price) || 0) * (parseInt(item.qty) || 0);
+            });
+            let html = '';
+            Object.entries(catMap).sort((a,b) => b[1].qty - a[1].qty).forEach(([cat, d]) => {
+                html += `<div class="cat-item">
+                    <div class="cat-name">${cat}</div>
+                    <div class="cat-qty">${d.qty} পিস</div>
+                    <div class="cat-val">৳ ${Math.round(d.val).toLocaleString('bn-BD')}</div>
+                </div>`;
+            });
+            document.getElementById('catGrid').innerHTML = html || '<div style="color:#aaa;">কোনো ডাটা নেই</div>';
+        }
+
+        // ══ ফুল স্টক রিপোর্ট PDF ══
+        async function downloadReportPDF() {
+            if (!_allInventory.length) { alert('কোনো ডাটা নেই!'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            const now = new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' });
+            const items = _allInventory;
+
+            // হেডার
+            doc.setFillColor(13, 71, 161);
+            doc.rect(0, 0, 210, 28, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Haji Modaccher Cloth Store', 105, 11, { align: 'center' });
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Sandwip, Chittagong  |  Stock Inventory Report  |  ' + now, 105, 19, { align: 'center' });
+
+            // সামারি
+            let totalCost = 0, totalSell = 0, totalQty = 0;
+            items.forEach(i => {
+                totalQty  += parseInt(i.qty) || 0;
+                totalCost += (parseFloat(i.cost) || 0) * (parseInt(i.qty) || 0);
+                totalSell += (parseFloat(i.price) || 0) * (parseInt(i.qty) || 0);
+            });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Items: ' + items.length + ' types  |  Total Qty: ' + totalQty + '  |  Cost Value: BDT ' + Math.round(totalCost).toLocaleString() + '  |  Sell Value: BDT ' + Math.round(totalSell).toLocaleString(), 14, 36);
+
+            // টেবিল হেডার
+            const cols = [14, 42, 90, 116, 136, 158, 180];
+            const headers = ['S/N', 'Name', 'Category', 'Qty', 'Cost', 'Price', 'Total'];
+            doc.setFillColor(44, 62, 80);
+            doc.rect(10, 40, 190, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            headers.forEach((h, i) => doc.text(h, cols[i], 46));
+
+            // টেবিল রো
+            let y = 52;
+            doc.setFont('helvetica', 'normal');
+            items.forEach((item, idx) => {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                    doc.setFillColor(44, 62, 80);
+                    doc.rect(10, y-6, 190, 8, 'F');
+                    doc.setTextColor(255,255,255);
+                    doc.setFont('helvetica','bold');
+                    headers.forEach((h,i) => doc.text(h, cols[i], y));
+                    doc.setFont('helvetica','normal');
+                    y += 8;
+                }
+                const bg = idx % 2 === 0 ? [248,249,250] : [255,255,255];
+                doc.setFillColor(...bg);
+                doc.rect(10, y-4, 190, 6.5, 'F');
+                doc.setTextColor(0,0,0);
+                doc.setFontSize(7.5);
+                const total = ((parseFloat(item.price)||0) * (parseInt(item.qty)||0));
+                const nm = item.name.length > 22 ? item.name.substring(0,22)+'...' : item.name;
+                doc.text(item.serial || '', cols[0], y);
+                doc.text(nm, cols[1], y);
+                doc.text(item.category || '', cols[2], y);
+                doc.text(String(item.qty||0), cols[3], y);
+                doc.text(String(item.cost||0), cols[4], y);
+                doc.text(String(item.price||0), cols[5], y);
+                doc.text(Math.round(total).toLocaleString(), cols[6], y);
+                y += 6.5;
+            });
+
+            // ফুটার টোটাল
+            y += 3;
+            doc.setFillColor(13, 71, 161);
+            doc.rect(10, y-4, 190, 8, 'F');
+            doc.setTextColor(255,255,255);
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(8.5);
+            doc.text('TOTAL', cols[0], y+1);
+            doc.text(String(totalQty), cols[3], y+1);
+            doc.text('Cost: ' + Math.round(totalCost).toLocaleString(), cols[4], y+1);
+            doc.text('Sell: ' + Math.round(totalSell).toLocaleString(), cols[5], y+1);
+            doc.text('Profit: ' + Math.round(totalSell-totalCost).toLocaleString(), cols[6], y+1);
+
+            const dateStr = new Date().toISOString().slice(0,10);
+            doc.save('StockReport_' + dateStr + '.pdf');
+            bkToast('', '✅', 'রিপোর্ট ডাউনলোড', 'স্টক রিপোর্ট PDF তৈরি হয়েছে');
+        }
+
+        function deleteProduct(id) {
+            if (confirm("স্টক থেকে ডিলিট করবেন?")) db.ref('inventory/' + id).remove();
+        }
+
+        // ══ প্রতিটি ফাংশনে সরাসরি একটি পণ্যের ব্যাকআপ পাঠানো হচ্ছে ══
+
+        db.ref('inventory').on('child_removed', (snapshot) => {
+            const removedData = snapshot.val();
+            bkToast('pending', 'ℹ️', 'স্টক থেকে সরানো হয়েছে', (removedData.name || removedData.serial) + ' শুধু ডাটাবেস থেকে মুছেছে');
+        });
+
+        /* ══════════════════════════════════════════════════════════════════
+           🔄 AUTO-SYNC: যেকোনো সোর্স থেকে inventory পরিবর্তন হলে auto-detect
+           — POS থেকে বিক্রি হোক, বা অন্য যেকোনো জায়গা থেকে qty/price/name
+             যেকিছু বদলাক — Firebase child_changed ধরে ফেলবে এবং
+             সাথে সাথে ব্যাকআপ সার্ভারে পাঠাবে।
+        ══════════════════════════════════════════════════════════════════ */
+
+        // এই Map-এ রাখা হয় কোন serial এই page থেকেই update হচ্ছে
+        // — সেগুলো child_changed-এ double-send এড়াতে skip করা হয়
+        const _localUpdates = new Map(); // serial → timestamp
+
+        // যেকোনো বাটন/ফাংশন Firebase update করার আগে এটা call করো
+        function _markLocalUpdate(serial) {
+            _localUpdates.set(serial, Date.now());
+        }
+
+        // child_changed: Firebase-এ যেকোনো পণ্য বদলালে
+        const _autoSyncDebounce = {};
+        db.ref('inventory').on('child_changed', (snapshot) => {
+            const item = snapshot.val();
+            if (!item) return;
+            const sid = item.serial || snapshot.key;
+
+            // এই page থেকেই করা update হলে (৩ সেকেন্ডের মধ্যে) skip করো
+            const localTs = _localUpdates.get(sid);
+            if (localTs && (Date.now() - localTs) < 3000) {
+                return; // double-send এড়ানো হলো
+            }
+
+            // বাইরের পরিবর্তন (POS বা অন্য device) — debounce করে backup পাঠাও
+            if (_autoSyncDebounce[sid]) clearTimeout(_autoSyncDebounce[sid]);
+            _autoSyncDebounce[sid] = setTimeout(() => {
+                delete _autoSyncDebounce[sid];
+                bkSet('saving', '⏳', 'স্বয়ংক্রিয় সিঙ্ক', (item.name || sid) + ' — পরিবর্তন ডিটেক্ট হয়েছে', 'সিঙ্কিং...');
+                bkToast('', '🔄', 'অটো-সিঙ্ক', (item.name || sid) + ' (qty: ' + (item.qty ?? '?') + ') → ব্যাকআপে আপডেট হচ্ছে');
+                bkEnqueue('inventory', item);
+            }, 4000); // ৪ সেকেন্ড debounce — rapid transactions একসাথে batch হবে
+        });
+        // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+
+        async function bulkBackupAll() {
+            if (!confirm('Firebase-এর সব পণ্য Google Sheet-এ ব্যাকআপ করবেন?')) return;
+            bkSet('saving', '⏳', 'বাল্ক ব্যাকআপ শুরু হচ্ছে...', 'সব পণ্য পাঠানো হচ্ছে...', 'চলছে...');
+            const snapshot = await db.ref('inventory').get();
+            const data = snapshot.val();
+            if (!data) { alert('কোনো পণ্য পাওয়া যায়নি!'); return; }
+            const items = Object.values(data);
+            let count = 0;
+            for (const item of items) {
+                await new Promise(resolve => {
+                    fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ type: 'inventory', data: item }) })
+                    .then(r => r.json())
+                    .then(() => { count++; resolve(); })
+                    .catch(() => resolve());
+                });
+                await new Promise(r => setTimeout(r, 300));
+            }
+            bkSet('', '☁️', 'বাল্ক ব্যাকআপ সম্পন্ন', 'মোট ' + count + 'টি পণ্য Sheet-এ পাঠানো হয়েছে', 'সফল ✓');
+            bkToast('', '✅', 'ব্যাকআপ সম্পন্ন', 'মোট ' + count + 'টি পণ্য Google Sheet-এ সেভ হয়েছে');
+        }
+
+        /* ══════════════════════════════════════════════════════════════════
+           🚀 STARTUP AUTO-SYNC (updatedAt ভিত্তিক — দ্রুত ও স্মার্ট)
+           App খোলার সাথে সাথে শুধু last sync-এর পরে যা বদলেছে সেগুলো
+           backup-এ পাঠায়। Backup server থেকে কিছু আনতে হয় না।
+        ══════════════════════════════════════════════════════════════════ */
+        async function startupAutoSync() {
+            try {
+                // lastSyncTime Firebase থেকে পড়ো — সব device একই সময় পাবে
+                const syncSnap = await db.ref('inventory_sync/lastSyncTime').get();
+                const lastSyncTime = parseInt(syncSnap.val() || '0');
+                const isFirstTime  = lastSyncTime === 0;
+
+                bkSet('saving', '🔄', 'স্টার্টআপ চেক...', isFirstTime ? 'প্রথমবার — সব পণ্য চেক হচ্ছে' : 'নতুন পরিবর্তন খোঁজা হচ্ছে', 'চেকিং...');
+
+                // Firebase থেকে সব পণ্য আনো
+                const fbSnap = await db.ref('inventory').get();
+                const fbData = fbSnap.val();
+                if (!fbData) {
+                    bkSet('', '☁️', 'স্টক খালি', 'Firebase-এ কোনো পণ্য নেই', '');
+                    return;
+                }
+
+                // inventory_updates/ থেকে timestamp আনো — inventory structure অক্ষুণ্ণ থাকে
+                const updSnap = await db.ref('inventory_updates').get();
+                const updData = updSnap.val() || {};
+
+                const fbItems = Object.values(fbData);
+
+                // inventory_updates timestamp > lastSyncTime — শুধু এগুলোই sync দরকার
+                const toSync = fbItems.filter(item => {
+                    if (isFirstTime) return true; // প্রথমবার → সব
+                    const ts = updData[item.serial || item.barcode] || 0;
+                    return ts > lastSyncTime;
+                });
+
+                if (toSync.length === 0) {
+                    bkSet('', '☁️', 'সব আপ-টু-ডেট', 'কোনো নতুন পরিবর্তন নেই', 'সফল ✓');
+                    bkToast('', '✅', 'স্টার্টআপ চেক সম্পন্ন', 'সব পণ্য ব্যাকআপে আপ-টু-ডেট আছে');
+                    await db.ref('inventory_sync/lastSyncTime').set(Date.now());
+                    return;
+                }
+
+                bkSet('saving', '⏳', 'অটো-সিঙ্ক চলছে...', toSync.length + 'টি পণ্য আপডেট পাওয়া গেছে', 'সিঙ্কিং...');
+                bkToast('', '🔄', 'অটো-সিঙ্ক শুরু', toSync.length + 'টি পণ্যের পরিবর্তন ব্যাকআপে পাঠানো হচ্ছে...');
+
+                let done = 0;
+                for (const item of toSync) {
+                    await new Promise(resolve => {
+                        fetch(SHEET_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({ type: 'inventory', data: item })
+                        })
+                        .then(r => r.json())
+                        .then(() => { done++; resolve(); })
+                        .catch(() => {
+                            bkEnqueue('inventory', item); // fail হলে pending-এ রাখো
+                            resolve();
+                        });
+                    });
+                    await new Promise(r => setTimeout(r, 250));
+                }
+
+                // sync সম্পন্ন — Firebase-এ সময় সেভ করো (সব device দেখতে পাবে)
+                await db.ref('inventory_sync/lastSyncTime').set(Date.now());
+                bkSet('', '☁️', 'অটো-সিঙ্ক সম্পন্ন', done + '/' + toSync.length + 'টি পণ্য আপডেট হয়েছে', 'সফল ✓');
+                bkToast('', '✅', 'স্টার্টআপ সিঙ্ক সম্পন্ন', done + 'টি পণ্য ব্যাকআপে আপডেট হয়েছে');
+
+            } catch(e) {
+                console.error('startupAutoSync:', e);
+                bkSet('error', '⚠️', 'স্টার্টআপ সিঙ্ক সমস্যা', 'পরে আবার চেষ্টা করবে', 'Error');
+            }
+        }
+
+        window.onload = () => {
+            loadCategories();
+            loadStock();
+            setTimeout(bkSendPending, 3000);
+            setTimeout(startupAutoSync, 5000); // ৫ সেকেন্ড পরে — page লোড শেষে চলবে
+        };
+    </script>
+</body>
+</html>
