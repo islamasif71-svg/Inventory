@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>হাজী মোদাচ্ছের ক্লথ স্টোর - ইনভেন্টরি</title>
+    <title>হাজী মোদাচ্ছের ক্লথ স্টোর - ইনভেন্টরি v3</title>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -1417,13 +1417,82 @@
                 }
 
                 // sync সম্পন্ন — Firebase-এ সময় সেভ করো (সব device দেখতে পাবে)
-                await db.ref('inventory_sync/lastSyncTime').set(Date.now());
+                const newSyncTime = Date.now();
+                await db.ref('inventory_sync/lastSyncTime').set(newSyncTime);
                 bkSet('', '☁️', 'অটো-সিঙ্ক সম্পন্ন', done + '/' + toSync.length + 'টি পণ্য আপডেট হয়েছে', 'সফল ✓');
                 bkToast('', '✅', 'স্টার্টআপ সিঙ্ক সম্পন্ন', done + 'টি পণ্য ব্যাকআপে আপডেট হয়েছে');
+
+                // 🧹 sync শেষে পুরনো inventory_updates entries নিরাপদে মুছো
+                // (background-এ চলে — এরর হলেও main flow নষ্ট হবে না)
+                safeCleanInventoryUpdates(newSyncTime).catch(e =>
+                    console.warn('cleanup (non-critical):', e)
+                );
 
             } catch(e) {
                 console.error('startupAutoSync:', e);
                 bkSet('error', '⚠️', 'স্টার্টআপ সিঙ্ক সমস্যা', 'পরে আবার চেষ্টা করবে', 'Error');
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════════════════
+           🧹 SAFE CLEANUP — inventory_updates পরিষ্কার করে
+           শুধু সেগুলো মুছে যেগুলো:
+             ✅ newSyncTime-এর আগে (ইতিমধ্যে backup হয়ে গেছে)
+             ✅ Firebase inventory-তে এখনো আছে অথবা নেই (উভয়ই নিরাপদ)
+           কখনো মুছবে না:
+             ❌ newSyncTime-এর পরের entry (নতুন পরিবর্তন, এখনো backup হয়নি)
+             ❌ যদি Firebase থেকে data পড়তে সমস্যা হয়
+        ══════════════════════════════════════════════════════════════════ */
+        async function safeCleanInventoryUpdates(newSyncTime) {
+            try {
+                // ১. inventory_updates-এর সব entry পড়ো
+                const updSnap = await db.ref('inventory_updates').get();
+                if (!updSnap.exists()) return; // কিছু নেই, কাজ নেই
+
+                const updData = updSnap.val();
+
+                // ২. শুধু সেগুলো বাছো যেগুলো newSyncTime-এর আগে
+                //    (এর মানে এগুলো sync-এ ইতিমধ্যে handle হয়েছে বা আগের cycle-এ হয়েছে)
+                const toDelete = Object.entries(updData).filter(([id, ts]) => {
+                    const tsNum = parseInt(ts) || 0;
+                    // Extra safety: newSyncTime থেকে ৫ সেকেন্ড margin রাখো
+                    // (sync চলার সময় কোনো নতুন update এলে সেটা যেন না মুছে)
+                    return tsNum > 0 && tsNum < (newSyncTime - 5000);
+                });
+
+                if (toDelete.length === 0) {
+                    console.log('🧹 cleanup: মোছার মতো কিছু নেই');
+                    return;
+                }
+
+                // ৩. ছোট ছোট batch-এ মুছো (৫টা করে) — Firebase rate limit এড়াতে
+                const BATCH = 5;
+                let deleted = 0;
+
+                for (let i = 0; i < toDelete.length; i += BATCH) {
+                    const batch = toDelete.slice(i, i + BATCH);
+
+                    // প্রতিটা delete আলাদাভাবে try করো
+                    // একটা fail হলে বাকিগুলো আটকাবে না
+                    await Promise.allSettled(
+                        batch.map(([id]) =>
+                            db.ref('inventory_updates/' + id).remove()
+                              .then(() => { deleted++; })
+                              .catch(err => console.warn(`cleanup skip [${id}]:`, err.message))
+                        )
+                    );
+
+                    // batch-এর মাঝে একটু বিরতি
+                    if (i + BATCH < toDelete.length) {
+                        await new Promise(r => setTimeout(r, 300));
+                    }
+                }
+
+                console.log(`🧹 inventory_updates cleanup: ${deleted}/${toDelete.length}টি পুরনো entry মুছা হয়েছে`);
+
+            } catch(e) {
+                // cleanup fail হলে শুধু log করো — কোনো alert বা UI change নয়
+                console.warn('safeCleanInventoryUpdates error (non-critical):', e.message);
             }
         }
 
