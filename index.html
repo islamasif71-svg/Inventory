@@ -909,18 +909,23 @@
             });
         }
 
-        function addMoreQty(id, oldQty) {
-            let added = prompt("কত পিস নতুন স্টক যোগ করতে চান?", "1");
-            if (added != null && added !== "") {
-                _markLocalUpdate(id);
-                db.ref('inventory/' + id).update({ qty: parseInt(oldQty) + parseInt(added) }).then(() => {
-                    db.ref('inventory_updates/' + id).set(Date.now());
-                    db.ref('inventory/' + id).once('value', snap => {
+        function addMoreQty(id) {
+            const raw = prompt("কত পিস নতুন স্টক যোগ করতে চান?", "1");
+            if (raw === null || raw === "") return;
+            const added = parseInt(raw);
+            if (isNaN(added) || added <= 0) { alert("সঠিক সংখ্যা দিন! (১ বা বেশি)"); return; }
+            // ✅ Fix: transaction — Firebase থেকে সর্বশেষ qty পড়ে যোগ করে
+            // আগে DOM-এর পুরনো qty ব্যবহার করত → POS একসাথে বিক্রি করলে qty ভুল হতো
+            _markLocalUpdate(id);
+            db.ref('inventory/' + id + '/qty').transaction(cur => {
+                return (parseFloat(cur) || 0) + added;
+            }).then(() => {
+                db.ref('inventory_updates/' + id).set(Date.now());
+                db.ref('inventory/' + id).once('value', snap => {
                     const item = snap.val();
                     if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
                 });
-                });
-            }
+            });
         }
 
         function editCost(id, oldCost) {
@@ -1125,8 +1130,8 @@
                     <td><span class="${!isFromBackup ? 'editable-price' : ''}" onclick="${!isFromBackup ? `editCategory('${item.serial}', '${item.category}')` : ''}" title="${!isFromBackup ? 'ক্লিক করে এডিট করুন' : ''}">${item.category}</span></td>
                     <td>
                         <span class="stock-count" style="${isLow ? 'color:#e65100;' : ''}">${item.qty} টি</span>
-                        ${!isFromBackup ? `<button class="btn-update" onclick="addMoreQty('${item.serial}', '${item.qty}')">+</button>` : ''}
-                        ${!isFromBackup ? `<button class="btn-minus" onclick="decreaseQty('${item.serial}', '${item.qty}', '${item.name}')" title="পরিমাণ কমান">−</button>` : ''}
+                        ${!isFromBackup ? `<button class="btn-update" onclick="addMoreQty('${item.serial}')">+</button>` : ''}
+                        ${!isFromBackup ? `<button class="btn-minus" onclick="decreaseQty('${item.serial}', '${item.name}')" title="পরিমাণ কমান">−</button>` : ''}
                     </td>
                     <td><span class="${!isFromBackup ? 'editable-price' : ''}" onclick="${!isFromBackup ? `editCost('${item.serial}', '${item.cost}')` : ''}">${item.cost || 0}/-</span></td>
                     <td><b class="${!isFromBackup ? 'editable-price' : ''}" style="color:var(--blue);" onclick="${!isFromBackup ? `editPrice('${item.serial}', '${item.price}')` : ''}">${item.price}/-</b></td>
@@ -1156,7 +1161,14 @@
             if (!sellQty || isNaN(sellQty) || sellQty <= 0) return;
             if (sellQty > qty) { alert('স্টকে এতটি নেই! বর্তমান স্টক: ' + qty); return; }
             _markLocalUpdate(id);
-            db.ref('inventory/' + id).update({ qty: qty - sellQty }).then(() => {
+            // ✅ Fix: transaction — Firebase থেকে সর্বশেষ qty পড়ে বিয়োগ করে
+            // আগে DOM-এর পুরনো qty ব্যবহার করত → POS একসাথে বিক্রি করলে qty ভুল হতো
+            db.ref('inventory/' + id + '/qty').transaction(cur => {
+                const current = parseFloat(cur) || 0;
+                if (sellQty > current) return; // স্টক না থাকলে abort
+                return current - sellQty;
+            }).then(result => {
+                if (!result.committed) { alert('স্টকে এতটি নেই!'); return; }
                 db.ref('inventory_updates/' + id).set(Date.now());
                 db.ref('inventory/' + id).once('value', snap => {
                     const item = snap.val();
@@ -1167,20 +1179,27 @@
         }
 
         // ══ স্টক কমানো (সংশোধন) ══
-        function decreaseQty(id, currentQty, name) {
-            const qty = parseInt(currentQty);
-            const sub = parseInt(prompt(`"${name}" থেকে কত পিস কমাবেন? (বর্তমান: ${qty} পিস)`, '1'));
-            if (!sub || isNaN(sub) || sub <= 0) return;
-            if (sub > qty) { alert('স্টকে মাত্র ' + qty + ' পিস আছে! এর বেশি কমানো যাবে না।'); return; }
+        function decreaseQty(id, name) {
+            const rawSub = prompt(`"${name}" থেকে কত পিস কমাবেন?`, '1');
+            if (rawSub === null || rawSub === "") return;
+            const sub = parseInt(rawSub);
+            if (isNaN(sub) || sub <= 0) { alert('সঠিক সংখ্যা দিন!'); return; }
             _markLocalUpdate(id);
-            db.ref('inventory/' + id).update({ qty: qty - sub }).then(() => {
+            // ✅ Fix: transaction — Firebase থেকে সর্বশেষ qty পড়ে বিয়োগ করে
+            // আগে DOM-এর পুরনো qty ব্যবহার করত → POS একসাথে বিক্রি করলে qty ভুল হতো
+            db.ref('inventory/' + id + '/qty').transaction(cur => {
+                const current = parseFloat(cur) || 0;
+                if (sub > current) return; // স্টক না থাকলে abort
+                return current - sub;
+            }).then(result => {
+                if (!result.committed) { alert('স্টকে এতটি নেই!'); return; }
                 db.ref('inventory_updates/' + id).set(Date.now());
                 db.ref('inventory/' + id).once('value', snap => {
                     const item = snap.val();
                     if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
                 });
+                bkToast('', 'ℹ️', 'স্টক সংশোধন', name + ' থেকে ' + sub + ' পিস কমানো হয়েছে');
             });
-            bkToast('', 'ℹ️', 'স্টক সংশোধন', name + ' থেকে ' + sub + ' পিস কমানো হয়েছে');
         }
 
         // ══ ক্যাটাগরি ব্রেকডাউন ══
@@ -1317,7 +1336,12 @@
 
         db.ref('inventory').on('child_removed', (snapshot) => {
             const removedData = snapshot.val();
-            bkToast('pending', 'ℹ️', 'স্টক থেকে সরানো হয়েছে', (removedData.name || removedData.serial) + ' শুধু ডাটাবেস থেকে মুছেছে');
+            // ✅ Fix: Google Sheets-এও delete পাঠাও
+            // আগে শুধু toast দেখাত — Firebase মুছলেও Sheets-এ থেকে যেত
+            if (removedData && removedData.serial) {
+                bkEnqueue('inventory_delete', { serial: removedData.serial, name: removedData.name || removedData.serial });
+            }
+            bkToast('pending', 'ℹ️', 'স্টক থেকে সরানো হয়েছে', (removedData.name || removedData.serial) + ' মুছে ফেলা হয়েছে');
         });
 
         /* ══════════════════════════════════════════════════════════════════
