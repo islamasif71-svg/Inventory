@@ -869,11 +869,36 @@
             });
         }
 
-        function saveToInventory() {
-            const name = document.getElementById('pName').value, price = document.getElementById('pPrice').value, cost = document.getElementById('pCost').value;
+        async function saveToInventory() {
+            const name = document.getElementById('pName').value.trim();
+            const price = parseFloat(document.getElementById('pPrice').value);
+            const cost  = parseFloat(document.getElementById('pCost').value) || 0;
             const qty = parseInt(document.getElementById('pQty').value), category = document.getElementById('pCategorySelect').value;
-            const sID = "HMC" + Date.now().toString().slice(-6);
-            if (!name || !price) { alert("দয়া করে নাম এবং মূল্য দিন!"); return; }
+            if (!name) { alert("দয়া করে পণ্যের নাম দিন!"); return; }
+            if (!price || price <= 0) { alert("সঠিক বিক্রয় মূল্য দিন! (০ বা খালি হবে না)"); return; }
+
+            // Firebase transaction: lastSerialNum সর্বশেষ কতটা তৈরি হয়েছে সেটা +১ করে সেভ করে
+            // (max দেখে না — শুধু last generated থেকে ক্রমানুসারে বাড়ে)
+            const serialRef = db.ref('settings/lastSerialNum');
+            let sID;
+            try {
+                const result = await serialRef.transaction(current => (current || 0) + 1);
+
+                // ✅ committed চেক: নেট দুর্বল বা Firebase busy থাকলে
+                // committed = false হয় এবং snapshot.val() = null হতে পারে।
+                // এই অবস্থায় এগিয়ে গেলে সিরিয়াল হয় "HMCnull" — যা Firebase-এ সেভ হয়ে যায়!
+                if (!result.committed || result.snapshot.val() === null) {
+                    alert("⚠️ সিরিয়াল তৈরি হয়নি!\nইন্টারনেট চেক করে আবার চেষ্টা করুন।");
+                    return;
+                }
+
+                const newNum = result.snapshot.val();
+                sID = "HMC" + String(newNum).padStart(6, '0');
+            } catch (e) {
+                alert("সিরিয়াল নম্বর তৈরিতে সমস্যা হয়েছে! ইন্টারনেট চেক করে আবার চেষ্টা করুন।");
+                return;
+            }
+
             const invData = { name, category, qty, price, cost, serial: sID, barcode: sID };
             _markLocalUpdate(sID);
             db.ref('inventory/' + sID).set(invData).then(() => {
@@ -899,17 +924,18 @@
         }
 
         function editCost(id, oldCost) {
-            let newCost = prompt("নতুন কেনা দাম সেট করুন:", oldCost);
-            if (newCost != null && newCost !== "") {
-                _markLocalUpdate(id);
-                db.ref('inventory/' + id).update({ cost: newCost }).then(() => {
-                    db.ref('inventory_updates/' + id).set(Date.now());
-                    db.ref('inventory/' + id).once('value', snap => {
-                    const item = snap.val();
-                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
-                });
-                });
-            }
+            const raw = prompt("নতুন কেনা দাম সেট করুন:", oldCost);
+            if (raw === null || raw === "") return;
+            const newCost = parseFloat(raw);
+            if (isNaN(newCost) || newCost < 0) { alert("সঠিক কেনা দাম দিন!"); return; }
+            _markLocalUpdate(id);
+            db.ref('inventory/' + id).update({ cost: newCost }).then(() => {
+                db.ref('inventory_updates/' + id).set(Date.now());
+                db.ref('inventory/' + id).once('value', snap => {
+                const item = snap.val();
+                if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+            });
+            });
         }
 
         function editName(id, oldName) {
@@ -976,17 +1002,18 @@
         }
 
         function editPrice(id, oldPrice) {
-            let newPrice = prompt("নতুন বিক্রয় মূল্য সেট করুন:", oldPrice);
-            if (newPrice != null && newPrice !== "") {
-                _markLocalUpdate(id);
-                db.ref('inventory/' + id).update({ price: newPrice }).then(() => {
-                    db.ref('inventory_updates/' + id).set(Date.now());
-                    db.ref('inventory/' + id).once('value', snap => {
-                    const item = snap.val();
-                    if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
-                });
-                });
-            }
+            const raw = prompt("নতুন বিক্রয় মূল্য সেট করুন:", oldPrice);
+            if (raw === null || raw === "") return;
+            const newPrice = parseFloat(raw);
+            if (isNaN(newPrice) || newPrice <= 0) { alert("সঠিক মূল্য দিন! (০ বা খালি হবে না)"); return; }
+            _markLocalUpdate(id);
+            db.ref('inventory/' + id).update({ price: newPrice }).then(() => {
+                db.ref('inventory_updates/' + id).set(Date.now());
+                db.ref('inventory/' + id).once('value', snap => {
+                const item = snap.val();
+                if (item) { bkSet('saving','⏳','ব্যাকআপ হচ্ছে',(item.name||item.serial)+' সিঙ্ক হচ্ছে','সিঙ্কিং...'); bkEnqueue('inventory', item); }
+            });
+            });
         }
 
         function generateBarcode(serial, price) {
