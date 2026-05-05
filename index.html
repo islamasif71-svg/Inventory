@@ -682,7 +682,7 @@
                 <div class="form-group"><label>পণ্যের নাম</label><input type="text" id="pName" placeholder="যেমন: টাঙ্গাইল সুতি শাড়ি"></div>
                 <div class="form-group"><label>ক্যাটাগরি</label><select id="pCategorySelect"></select></div>
                 <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;"><label>পরিমাণ (Qty)</label><input type="number" id="pQty" value="1" min="1"></div>
+                    <div class="form-group" style="flex: 1;"><label>পরিমাণ (Qty)</label><input type="number" id="pQty" value="1" min="0.01" step="0.01"></div>
                     <div class="form-group" style="flex: 1;"><label>বিক্রয় মূল্য</label><input type="number" id="pPrice" placeholder="0"></div>
                 </div>
                 <div class="form-group"><label>কেনা দাম (গোপন)</label><input type="number" id="pCost" placeholder="0"></div>
@@ -873,7 +873,7 @@
             const name = document.getElementById('pName').value.trim();
             const price = parseFloat(document.getElementById('pPrice').value);
             const cost  = parseFloat(document.getElementById('pCost').value) || 0;
-            const qty = parseInt(document.getElementById('pQty').value), category = document.getElementById('pCategorySelect').value;
+            const qty = parseFloat(document.getElementById('pQty').value), category = document.getElementById('pCategorySelect').value;
             if (!name) { alert("দয়া করে পণ্যের নাম দিন!"); return; }
             if (!price || price <= 0) { alert("সঠিক বিক্রয় মূল্য দিন! (০ বা খালি হবে না)"); return; }
 
@@ -912,8 +912,8 @@
         function addMoreQty(id) {
             const raw = prompt("কত পিস নতুন স্টক যোগ করতে চান?", "1");
             if (raw === null || raw === "") return;
-            const added = parseInt(raw);
-            if (isNaN(added) || added <= 0) { alert("সঠিক সংখ্যা দিন! (১ বা বেশি)"); return; }
+            const added = parseFloat(raw);
+            if (isNaN(added) || added <= 0) { alert("সঠিক সংখ্যা দিন! (০-এর বেশি)"); return; }
             // ✅ Fix: transaction — Firebase থেকে সর্বশেষ qty পড়ে যোগ করে
             // আগে DOM-এর পুরনো qty ব্যবহার করত → POS একসাথে বিক্রি করলে qty ভুল হতো
             _markLocalUpdate(id);
@@ -1051,7 +1051,7 @@
         function updateStockSummary(items) {
             let totalCost = 0, totalSell = 0, totalQty = 0;
             items.forEach(item => {
-                const qty   = parseInt(item.qty)   || 0;
+                const qty   = parseFloat(item.qty)   || 0;
                 const cost  = parseFloat(item.cost)  || 0;
                 const price = parseFloat(item.price) || 0;
                 totalCost += cost  * qty;
@@ -1118,7 +1118,7 @@
             items.forEach(item => {
                 if (filter !== "All" && item.category !== filter) return;
                 if (srch && !(item.serial||'').toLowerCase().includes(srch) && !(item.name||'').toLowerCase().includes(srch)) return;
-                const qty = parseInt(item.qty) || 0;
+                const qty = parseFloat(item.qty) || 0;
                 const isLow = qty <= threshold;
                 if (isLow) lowCount++;
                 const rowClass = isLow ? 'class="low-stock"' : '';
@@ -1155,9 +1155,9 @@
 
         // ══ কুইক সেল ══
         function quickSell(id, currentQty, name) {
-            const qty = parseInt(currentQty);
+            const qty = parseFloat(currentQty);
             if (qty <= 0) { alert('স্টক শেষ!'); return; }
-            const sellQty = parseInt(prompt(`"${name}" থেকে কত পিস বিক্রি হয়েছে?`, '1'));
+            const sellQty = parseFloat(prompt(`"${name}" থেকে কত পিস বিক্রি হয়েছে?`, '1'));
             if (!sellQty || isNaN(sellQty) || sellQty <= 0) return;
             if (sellQty > qty) { alert('স্টকে এতটি নেই! বর্তমান স্টক: ' + qty); return; }
             _markLocalUpdate(id);
@@ -1182,7 +1182,7 @@
         function decreaseQty(id, name) {
             const rawSub = prompt(`"${name}" থেকে কত পিস কমাবেন?`, '1');
             if (rawSub === null || rawSub === "") return;
-            const sub = parseInt(rawSub);
+            const sub = parseFloat(rawSub);
             if (isNaN(sub) || sub <= 0) { alert('সঠিক সংখ্যা দিন!'); return; }
             _markLocalUpdate(id);
             // ✅ Fix: transaction — Firebase থেকে সর্বশেষ qty পড়ে বিয়োগ করে
@@ -1222,8 +1222,8 @@
             _allInventory.forEach(item => {
                 const c = item.category || 'অন্যান্য';
                 if (!catMap[c]) catMap[c] = { qty: 0, val: 0 };
-                catMap[c].qty += parseInt(item.qty) || 0;
-                catMap[c].val += (parseFloat(item.price) || 0) * (parseInt(item.qty) || 0);
+                catMap[c].qty += parseFloat(item.qty) || 0;
+                catMap[c].val += (parseFloat(item.price) || 0) * (parseFloat(item.qty) || 0);
             });
             let html = '';
             Object.entries(catMap).sort((a,b) => b[1].qty - a[1].qty).forEach(([cat, d]) => {
@@ -1258,9 +1258,9 @@
             // সামারি
             let totalCost = 0, totalSell = 0, totalQty = 0;
             items.forEach(i => {
-                totalQty  += parseInt(i.qty) || 0;
-                totalCost += (parseFloat(i.cost) || 0) * (parseInt(i.qty) || 0);
-                totalSell += (parseFloat(i.price) || 0) * (parseInt(i.qty) || 0);
+                totalQty  += parseFloat(i.qty) || 0;
+                totalCost += (parseFloat(i.cost) || 0) * (parseFloat(i.qty) || 0);
+                totalSell += (parseFloat(i.price) || 0) * (parseFloat(i.qty) || 0);
             });
 
             doc.setTextColor(0, 0, 0);
@@ -1298,7 +1298,7 @@
                 doc.rect(10, y-4, 190, 6.5, 'F');
                 doc.setTextColor(0,0,0);
                 doc.setFontSize(7.5);
-                const total = ((parseFloat(item.price)||0) * (parseInt(item.qty)||0));
+                const total = ((parseFloat(item.price)||0) * (parseFloat(item.qty)||0));
                 const nm = item.name.length > 22 ? item.name.substring(0,22)+'...' : item.name;
                 doc.text(item.serial || '', cols[0], y);
                 doc.text(nm, cols[1], y);
