@@ -8,6 +8,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -751,6 +752,11 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        // Auth check — Main Code থেকে login না করলে ঢুকতে পারবে না
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user === null) { window.location.href = 'https://islamasif71-svg.github.io/MAIN-POS/'; }
+        });
         let lastGeneratedData = null;
 
         const SHEET_URL = "https://script.google.com/macros/s/AKfycbwv6fWSguLWk4h1p-BnbZDyiZnJ05gJGeDLk2-EpjcCEsY_geMw2JlTjARWn98YZkBWaw/exec";
