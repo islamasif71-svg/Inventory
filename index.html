@@ -728,7 +728,7 @@
             <input type="text" id="stockSearch" placeholder="🔍 পণ্যের নাম বা সিরিয়াল নম্বর দিয়ে সার্চ করুন..." oninput="applySearch()">
             <div class="threshold-row">
                 <span>⚠️ লো-স্টক সীমা:</span>
-                <input type="number" id="lowThreshold" value="1" min="1" max="50" onchange="applySearch()">
+                <input type="number" id="lowThreshold" value="1" min="0" max="50" onchange="applySearch()">
                 <span>পিস</span>
             </div>
         </div>
@@ -1113,13 +1113,13 @@
         function applySearch() {
             const filter = document.getElementById('viewFilter')?.value || 'All';
             const srch = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
-            const threshold = parseInt(document.getElementById('lowThreshold')?.value) || 1;
+            const _thRaw = parseInt(document.getElementById('lowThreshold')?.value); const threshold = isNaN(_thRaw) ? 1 : _thRaw;
             renderTable(_allInventory, filter, _isBackup, srch, threshold);
         }
 
         function renderTable(items, filter, isFromBackup, srch, threshold) {
             srch = srch || '';
-            threshold = threshold || 1;
+            threshold = (threshold === undefined || threshold === null) ? 1 : threshold;
             let html = "", lowCount = 0;
             items.forEach(item => {
                 if (filter !== "All" && item.category !== filter) return;
